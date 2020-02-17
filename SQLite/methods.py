@@ -13,9 +13,7 @@ from sqlite3 import Error
 
 
 def create_pandas_DataFrame_from_string(source_str, sep=';'):
-    """Create a pandas DataFrame from a string.
-
-    reference: https://stackoverflow.com/a/22605281
+    """reference: https://stackoverflow.com/a/22605281
     
     Args:
         source_str (:obj:`str`): SQLite Table to land `source_pandas_df` in.
@@ -25,14 +23,16 @@ def create_pandas_DataFrame_from_string(source_str, sep=';'):
                 2;4.5;200
                 3;4.7;65
                 4;3.2;140
+                
+        sep (:obj:`str`): Seperator used to denote column boundaries in `source_str`.
 
     Returns:
         source_pandas_df (:obj:`pd.core.frame.DataFrame`): Pandas DataFrame created during method call.
     """
 
     TESTDATA = StringIO(source_str)
-    df = pd.read_csv(TESTDATA, sep=sep)
-    return df
+    source_pandas_df = pd.read_csv(TESTDATA, sep=sep)
+    return source_pandas_df
 
 def create_SQLite_connection(db):
     """Create a database connection to a SQLite database.
@@ -80,4 +80,39 @@ def push_pandas_DataFrame_to_SQLite_table(conn, source_pandas_df, destination_sq
         
     source_pandas_df.to_sql(destination_sqlite_table, conn, if_exists=if_exists, index=index)
     print('successfully pushed dataframe to sqlite!')
+
+def checksum_dataframe_with_sqlite_table_same_data_before_and_after_load(conn, source_pandas_df, destination_sqlite_table):
+    """Check sums a pandas DataFrame before and after being pushed into SQLite.
+
+    Args:
+        conn (:obj:`sqlite3.Connection`): SQLite database connection created using `create_SQLite_connection` method.
+        source_pandas_df (:obj:`pd.core.frame.DataFrame`): Pandas DataFrame to compare with SQLite table.
+        destination_sqlite_table (:obj:`str`): SQLite table to compare with `source_pandas_df`.
+        
+    Uses:
+        `SQLiteQuery` class
+            `run_query_return_list_of_dicts` method
+        `pd.DataFrame` class
+            `equals` classmethod
+    Returns:
+        (:obj:`bool`): Boolean `source_pandas_df` equals `destination_sqlite_table`
+    """
+    if type(conn) != sqlite3.Connection:
+        raise TypeError('conn parameter must be type sqlite3.Connection.')    
+
+    if type(source_pandas_df) != pd.core.frame.DataFrame  :
+        raise TypeError('source_pandas_df parameter must be pd.core.frame.DataFrame.')
+        
+    if type(destination_sqlite_table) != str:
+        raise TypeError('destination_sqlite_table parameter must be str.')
+        
+    check_query = "SELECT * FROM {}".format(destination_sqlite_table)
+    df_check = pd.DataFrame(SQLiteQuery(conn,check_query).run_query_return_list_of_dicts())
+    try:
+        assert source_pandas_df.equals(df_check)
+        print('dataframes equal before and after load.')
+        return True
+    except AssertionError:
+        print("dataframes not equal before and after load.")
+        return False
 
