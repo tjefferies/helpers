@@ -1,6 +1,6 @@
 import string
 import os
-import sqlite3
+from helpers.SQLite.methods import create_SQLite_connection
 from string import Template
 
 
